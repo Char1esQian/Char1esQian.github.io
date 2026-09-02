@@ -103,6 +103,12 @@ inventory table with:
   biggest discount,
 - **days-on-lot badges** (amber ≥14 days, red ≥30 days) with a first-seen
   tooltip; a "N of M cars" counter reflects the active filters.
+- **stock trend chart** — combo column + line graph of inventory over time:
+  in-stock (green) and in-transit (amber) columns with a total-visible line,
+  one group per snapshot date. Pick "All dealers (nationwide)" or any single
+  dealership from the dropdown above the chart (dealerships are listed with
+  their state). Column values are labeled on the chart when there are 16 or
+  fewer snapshots; every element has a hover tooltip with exact figures.
 - **Column order** puts the market-relevant info first: Price, Dealers,
   On lot, First seen, then Off/MSRP, status and spec details.
 

@@ -76,6 +76,19 @@ def main() -> int:
         "SELECT date, unique_cars, in_stock, in_transit, partners_reporting,"
         "       avg_discount_pct FROM v_national_daily ORDER BY date")]
 
+    # per-dealership stock/in-transit over time for the trend chart:
+    # rows = [date, cars_visible, in_stock, in_transit]
+    sh = {}
+    for r in con.execute(
+            "SELECT store, state, date, cars_visible, in_stock, in_transit"
+            "  FROM v_per_store_daily ORDER BY store, date"):
+        g = sh.setdefault(r["store"], {"store": r["store"], "state": r["state"],
+                                       "rows": []})
+        g["rows"].append([r["date"], r["cars_visible"], r["in_stock"],
+                          r["in_transit"]])
+    store_history = sorted(sh.values(),
+                           key=lambda s: (-s["rows"][-1][1], s["store"]))
+
     # link the site footer to the actual repo, if this folder is pushed to GitHub
     repo_url = None
     try:
@@ -101,6 +114,7 @@ def main() -> int:
         "inventory": inventory,
         "sell_through": sell_through,
         "national_history": national_history,
+        "store_history": store_history,
         "price_changes": price_changes,
         "repo_url": repo_url,
     }
