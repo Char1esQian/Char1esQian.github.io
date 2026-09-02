@@ -88,8 +88,20 @@ FROM listings GROUP BY snapshot_date, car_id HAVING n >= 3 ORDER BY n DESC LIMIT
 
 The repo doubles as a website: `docs/index.html` renders `docs/data.json`
 (generated from the latest snapshot by `export_site_data.py`) into a live
-dashboard — KPIs, searchable/sortable inventory table, per-store panel,
-history and sell-through chart.
+dashboard — KPIs, per-store panel, history and sell-through chart, and an
+inventory table with:
+
+- **location filter** (state dropdown, built from store data; filters both the
+  table and the stores panel),
+- **trim filter** (Dual motor AWD 544 hp / Rear motor RWD 272 hp — Polestar's
+  API exposes no trim name, so trim = motor/drive/hp),
+- **status filter** (in stock / in transit),
+- **sorting** by any column via the clickable headers, plus a sort dropdown
+  that includes price, days-on-lot (longest first), first-seen date, MSRP and
+  biggest discount,
+- **days-on-lot badges** (amber ≥14 days, red ≥30 days) with a first-seen
+  tooltip; a "N of M cars" counter reflects the active filters.
+
 
 Daily workflow:
 

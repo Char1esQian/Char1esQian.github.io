@@ -46,10 +46,14 @@ def main() -> int:
     dol = {r["car_id"]: dict(r) for r in con.execute("SELECT * FROM v_days_on_lot")}
 
     store_names = {}
-    for r in con.execute("SELECT l.car_id, r.name FROM listings l"
-                         " JOIN retailers r ON r.partner_id = l.partner_id"
-                         " WHERE l.snapshot_date = ?", (latest,)):
+    store_states = {}
+    for r in con.execute(
+            "SELECT l.car_id, r.name, r.state_code FROM listings l"
+            " JOIN retailers r ON r.partner_id = l.partner_id"
+            " WHERE l.snapshot_date = ?", (latest,)):
         store_names.setdefault(r[0], []).append(r[1])
+        if r[2]:
+            store_states.setdefault(r[0], set()).add(r[2])
 
     skip = {"raw_json", "snapshot_date", "fetched_at", "partner_id", "car_id"}
     inventory = []
@@ -60,6 +64,7 @@ def main() -> int:
         out["first_seen"] = d.get("first_seen")
         out["days_on_lot"] = d.get("days_on_lot")
         out["store_names"] = sorted(store_names.get(cid, []))
+        out["store_states"] = sorted(store_states.get(cid, ()))
         inventory.append(out)
     inventory.sort(key=lambda r: (r.get("price_now") or 0))
 

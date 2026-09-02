@@ -49,6 +49,16 @@ border:1px solid var(--bord)}
 border-bottom:1px solid var(--bord);font-size:13.5px}
 .store:last-child{border-bottom:0}
 .store .n{color:var(--mut);font-size:12px}
+.fbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:13.5px}
+.fbar label{display:flex;gap:6px;align-items:center;color:var(--mut)}
+.fbar select,.fbar button{background:#0d1117;color:var(--fg);border:1px solid var(--bord);
+border-radius:6px;padding:3px 8px;font:inherit;font-size:13px}
+.fbar button{cursor:pointer}
+.fbar button:hover{border-color:var(--mut)}
+.dol{padding:0 6px;border-radius:999px;border:1px solid var(--bord);font-size:11.5px;
+display:inline-block;line-height:1.6}
+.dol.warn{color:var(--warn);border-color:var(--warn)}
+.dol.bad{color:var(--bad);border-color:var(--bad)}
 .big{font-weight:700}
 .mut{color:var(--mut)}
 footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--bord);
@@ -80,6 +90,32 @@ color:var(--mut);font-size:12.5px}
 </div>
 
 <h2>Inventory</h2>
+<div class="card" style="margin-bottom:14px">
+  <div class="fbar">
+    <label>Location
+      <select id="f_state"><option value="">All states</option></select></label>
+    <label>Trim
+      <select id="f_trim"><option value="">All trims</option>
+        <option value="Dual motor">Dual motor &middot; AWD &middot; 544 hp</option>
+        <option value="Rear motor">Rear motor &middot; RWD &middot; 272 hp</option></select></label>
+    <label>Status
+      <select id="f_status"><option value="">All</option>
+        <option value="in_stock">In stock</option>
+        <option value="in_transit">In transit</option></select></label>
+    <label>Sort
+      <select id="f_sort">
+        <option value="price_now:1">Price (low &rarr; high)</option>
+        <option value="price_now:-1">Price (high &rarr; low)</option>
+        <option value="days_on_lot:-1">Longest on lot first</option>
+        <option value="days_on_lot:1">Newest arrivals first</option>
+        <option value="first_seen:1">First seen (oldest)</option>
+        <option value="msrp:-1">MSRP (high &rarr; low)</option>
+        <option value="off:-1">Biggest discount</option>
+      </select></label>
+    <span id="f_count" class="mut"></span>
+    <button id="f_reset" type="button">reset</button>
+  </div>
+</div>
 <div class="grid">
   <div class="card" style="max-height:640px;overflow:auto">
     <table id="inv">
@@ -88,10 +124,11 @@ color:var(--mut);font-size:12.5px}
         <th data-k="off">Off</th><th data-k="availability">Status</th>
         <th data-k="exterior_color">Color</th><th data-k="rims">Wheels</th>
         <th data-k="packages">Packages</th><th data-k="lease_promo">Lease</th>
-        <th data-k="delivery_label">Delivery</th><th data-k="days_on_lot" class="num">DoL</th>
+        <th data-k="delivery_label">Delivery</th><th data-k="days_on_lot" class="num">On lot</th>
+        <th data-k="first_seen">First seen</th>
         <th data-k="store_names">Seen at</th>
       </tr></thead>
-      <tbody id="inv_body"><tr><td colspan="11" class="mut">loading&hellip;</td></tr></tbody>
+      <tbody id="inv_body"><tr><td colspan="12" class="mut">loading&hellip;</td></tr></tbody>
     </table>
   </div>
   <div>
@@ -130,33 +167,54 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const usd=v=>v==null?"&ndash;":"$"+Math.round(v).toLocaleString("en-US");
 const pct=v=>v==null?"&ndash;":Math.round(v*100)+"%";
-let INV=[],SORT={k:"price_now",dir:1};
+let INV=[],ST=[],SORT={k:"price_now",dir:1};
+const F={state:"",trim:"",status:""};
 
 function statusTag(a){const cls=a==="in_stock"?"in_stock":(a==="in_transit"?"in_transit":"sold");
 const txt=a==="in_stock"?"in stock":(a==="in_transit"?"in transit":"sold");
 return '<span class="tag '+cls+'">'+txt+"</span>";}
 
-function rows(){const k=SORT.k,d=SORT.dir;
-return INV.slice().sort((a,b)=>{let x=a[k],y=b[k];
-if(k==="store_names"){x=x?x.length:0;y=y?y.length:0;}
-if(k==="availability"){x=a.availability==="in_stock"?0:1;y=b.availability==="in_stock"?0:1;}
-if(k==="off"){x=(a.msrp-a.price_now)/a.msrp;y=(b.msrp-b.price_now)/b.msrp;}
-if(typeof x==="string"||typeof y==="string")return d*String(x??"").localeCompare(String(y??""));
-return d*((x??1e15)-(y??1e15));});}
+function filtered(){return INV.filter(c=>
+ (!F.state||(c.store_states||[]).includes(F.state)) &&
+ (!F.trim||c.engine===F.trim) &&
+ (!F.status||c.availability===F.status));}
 
-function renderInv(){const tb=$("inv_body");
-tb.innerHTML=rows().map(c=>{const off=c.msrp&&c.price_now?1-c.price_now/c.msrp:null;
+function rows(){const k=SORT.k,d=SORT.dir;
+const val=c=>k==="off"?(c.msrp&&c.price_now?(c.msrp-c.price_now)/c.msrp:null)
+ :k==="store_names"?(c.store_names||[]).length
+ :k==="availability"?(c.availability==="in_stock"?0:1)
+ :c[k];
+return filtered().slice().sort((a,b)=>{const x=val(a),y=val(b);
+if(x==null&&y==null)return 0;
+if(x==null)return 1;
+if(y==null)return -1;
+if(typeof x==="string"||typeof y==="string")return d*String(x).localeCompare(String(y));
+return d*(x-y);});}
+
+function dolBadge(c){if(c.days_on_lot==null)return "&ndash;";
+const cls=c.days_on_lot>=30?"bad":(c.days_on_lot>=14?"warn":"");
+return '<span class="dol '+cls+'" title="first seen '+(c.first_seen||"?")+
+' (days since the tracker first listed this car)">'+c.days_on_lot+"d</span>";}
+
+function renderInv(){const list=rows();const tb=$("inv_body");
+$("f_count").textContent=list.length+" of "+INV.length+" cars";
+tb.innerHTML=list.map(c=>{const off=c.msrp&&c.price_now?1-c.price_now/c.msrp:null;
 return "<tr><td class='num'>"+usd(c.price_now)+"</td><td class='num'>"+usd(c.msrp)+
 "</td><td class='num'>"+(off!=null?Math.round(off*100)+"%":"&ndash;")+"</td><td>"+
 statusTag(c.availability)+"</td><td>"+esc(c.exterior_color)+"</td><td>"+esc(c.rims)+
 "</td><td title='"+esc(c.options)+"'>"+esc(c.packages)+"</td><td>"+esc(c.lease_promo)+
-"</td><td>"+esc(c.delivery_label)+"</td><td class='num'>"+(c.days_on_lot==null?"&ndash;":c.days_on_lot)+
-"</td><td title='"+esc((c.store_names||[]).join(", "))+"'>"+(c.store_names||[]).length+"</td></tr>";}).join("")
-||"<tr><td colspan='11' class='mut'>no cars</td></tr>";}
+"</td><td>"+esc(c.delivery_label)+"</td><td class='num'>"+dolBadge(c)+
+"</td><td>"+(c.first_seen||"&ndash;")+"</td><td title='"+
+esc((c.store_names||[]).join(", "))+"'>"+(c.store_names||[]).length+"</td></tr>";}).join("")
+||"<tr><td colspan='12' class='mut'>no cars match the current filters</td></tr>";}
 
 function renderStores(st){$("stores").innerHTML=st.map(s=>
 "<div class='store'><div>"+esc(s.store)+" <span class='n'>"+esc(s.state)+"</span></div><div>"+
-s.cars_visible+" <span class='n'>("+s.in_stock+" stock / "+s.in_transit+" transit)</span></div></div>").join("");}
+s.cars_visible+" <span class='n'>("+s.in_stock+" stock / "+s.in_transit+" transit)</span></div></div>").join("");
+const states={};st.forEach(s=>{if(s.state)states[s.state]=(states[s.state]||0)+s.cars_visible;});
+const sel=$("f_state"),cur=F.state;
+sel.innerHTML="<option value=''>All states</option>"+Object.keys(states).sort().map(s=>
+"<option value='"+s+"'"+(s===cur?" selected":"")+">"+s+" ("+states[s]+")</option>").join("");}
 
 function renderHist(nh,st){$("hist_body").innerHTML=nh.slice().reverse().map(x=>
 "<tr><td>"+x.date+"</td><td class='num'>"+x.unique_cars+"</td><td class='num'>"+x.in_stock+
@@ -173,11 +231,27 @@ esc((c.car_id||"").slice(0,18))+"&hellip;</div><div><span class='cut-dn'>"+usd(c
 c.snapshot_date+"</span></div></div>").join("");
 $("cuts").classList.remove("mut");}
 
+function setSortSel(){const cur=SORT.k+":"+SORT.dir,sel=$("f_sort");
+if([...sel.options].some(o=>o.value===cur)){sel.value=cur;return;}
+let o=sel.querySelector("option[value=custom]");
+if(!o){o=document.createElement("option");o.value="custom";sel.appendChild(o);}
+o.textContent="sort: "+SORT.k+(SORT.dir<0?" \u2193":" \u2191");sel.value="custom";}
+
+function renderAll(){renderInv();renderStores($("f_state").value?ST.filter(s=>s.state===$("f_state").value):ST);}
+
 document.querySelectorAll("#inv th").forEach(th=>th.addEventListener("click",()=>{
-const k=th.dataset.k;SORT.dir=SORT.k===k?-SORT.dir:1;SORT.k=k;renderInv();}));
+const k=th.dataset.k;SORT.dir=SORT.k===k?-SORT.dir:1;SORT.k=k;setSortSel();renderAll();}));
+
+for(const id of["f_state","f_trim","f_status"])
+$(id).addEventListener("change",e=>{F[id.slice(2)]=e.target.value;renderAll();});
+$("f_sort").addEventListener("change",()=>{const[k,d]=$("f_sort").value.split(":");
+if(k!=="custom"){SORT={k,dir:+d};renderAll();}});
+$("f_reset").addEventListener("click",()=>{F.state=F.trim=F.status="";
+for(const id of["f_state","f_trim","f_status"])$(id).value="";
+SORT={k:"price_now",dir:1};$("f_sort").value="price_now:1";renderAll();});
 
 fetch("data.json").then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}).then(d=>{
-INV=d.inventory;
+INV=d.inventory;ST=d.stores||[];
 $("gen").textContent="generated "+(d.generated_at||"").replace("T"," ").slice(0,16)+" UTC";
 $("snapdate").textContent=d.snapshot_date;
 const n=d.national||{},inv=INV||[];
@@ -189,7 +263,7 @@ const prices=inv.map(c=>c.price_now).filter(v=>v!=null);
 $("k_min").textContent=prices.length?usd(Math.min(...prices)):"&ndash;";
 const dols=inv.map(c=>c.days_on_lot).filter(v=>v!=null);
 $("k_dol").textContent=dols.length?Math.max(...dols)+"d":"&ndash;";
-renderStores(d.stores||[]);renderInv();renderHist(d.national_history||[],d.sell_through||[]);
+renderAll();renderHist(d.national_history||[],d.sell_through||[]);
 renderCuts(d.price_changes||[]);
 if(d.repo_url){$("repo_link").href=d.repo_url;}
 }).catch(e=>{$("err").hidden=false;
