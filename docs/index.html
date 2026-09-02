@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polestar 4 US Inventory Tracker</title>
+<meta name="description" content="Daily snapshot of Polestar 4 US inventory: prices, days-on-lot, sell-through, per-store stock.">
+<style>
+:root{--bg:#0d1117;--card:#161b22;--bord:#21262d;--fg:#e6edf3;--mut:#8b949e;
+--acc:#34d399;--acc2:#60a5fa;--warn:#f59e0b;--bad:#f87171}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+font:15px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:20px}
+a{color:var(--acc2);text-decoration:none}
+h1{font-size:22px;margin:0}
+h2{font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);
+margin:26px 0 10px}
+.sub{color:var(--mut);font-size:13px;margin-top:4px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:
+flex-end;gap:10px;border-bottom:1px solid var(--bord);padding-bottom:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:10px;margin:18px 0}
+.kpi{background:var(--card);border:1px solid var(--bord);border-radius:10px;
+padding:12px 14px}
+.kpi .v{font-size:24px;font-weight:700}
+.kpi .l{font-size:12px;color:var(--mut)}
+.grid{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--bord);border-radius:10px;
+padding:12px 14px;overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:6px 8px;text-align:left;white-space:nowrap;
+border-bottom:1px solid var(--bord)}
+th{color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--card);
+cursor:pointer;user-select:none}
+th:hover{color:var(--fg)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr:hover td{background:#1c2330}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;
+border:1px solid var(--bord)}
+.tag.in_stock{color:var(--acc);border-color:var(--acc)}
+.tag.in_transit{color:var(--warn);border-color:var(--warn)}
+.tag.sold{color:var(--bad);border-color:var(--bad)}
+.cut-up{color:var(--acc)}.cut-dn{color:var(--bad)}
+.bar{height:6px;border-radius:3px;background:#2d333b;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc)}
+.store{display:flex;justify-content:space-between;gap:8px;padding:6px 0;
+border-bottom:1px solid var(--bord);font-size:13.5px}
+.store:last-child{border-bottom:0}
+.store .n{color:var(--mut);font-size:12px}
+.big{font-weight:700}
+.mut{color:var(--mut)}
+footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--bord);
+color:var(--mut);font-size:12.5px}
+#err{color:var(--bad);margin:14px 0}
+@media print{body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>&#9889; Polestar 4 US Inventory Tracker</h1>
+    <div class="sub">Unofficial daily snapshot from Polestar's public stock-cars API &middot;
+      <span id="gen">loading&hellip;</span></div>
+  </div>
+  <div class="sub">snapshot <b id="snapdate">&mdash;</b></div>
+</header>
+
+<div id="err" hidden></div>
+
+<div class="kpis">
+  <div class="kpi"><div class="v" id="k_total">&ndash;</div><div class="l">unique cars (national)</div></div>
+  <div class="kpi"><div class="v" id="k_stock">&ndash;</div><div class="l">in stock now</div></div>
+  <div class="kpi"><div class="v" id="k_transit">&ndash;</div><div class="l">in transit</div></div>
+  <div class="kpi"><div class="v" id="k_disc">&ndash;</div><div class="l">avg off MSRP</div></div>
+  <div class="kpi"><div class="v" id="k_min">&ndash;</div><div class="l">lowest price now</div></div>
+  <div class="kpi"><div class="v" id="k_dol">&ndash;</div><div class="l">oldest car on lot</div></div>
+</div>
+
+<h2>Inventory</h2>
+<div class="grid">
+  <div class="card" style="max-height:640px;overflow:auto">
+    <table id="inv">
+      <thead><tr>
+        <th data-k="price_now">Price</th><th data-k="msrp" class="num">MSRP</th>
+        <th data-k="off">Off</th><th data-k="availability">Status</th>
+        <th data-k="exterior_color">Color</th><th data-k="rims">Wheels</th>
+        <th data-k="packages">Packages</th><th data-k="lease_promo">Lease</th>
+        <th data-k="delivery_label">Delivery</th><th data-k="days_on_lot" class="num">DoL</th>
+        <th data-k="store_names">Seen at</th>
+      </tr></thead>
+      <tbody id="inv_body"><tr><td colspan="11" class="mut">loading&hellip;</td></tr></tbody>
+    </table>
+  </div>
+  <div>
+    <div class="card">
+      <h2 style="margin-top:0">Stores</h2>
+      <div id="stores">loading&hellip;</div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2 style="margin-top:0">Recent price cuts</h2>
+      <div id="cuts" class="mut">none recorded yet</div>
+    </div>
+  </div>
+</div>
+
+<h2>History</h2>
+<div class="grid">
+  <div class="card"><table id="hist"><thead><tr>
+    <th>Date</th><th class="num">Cars</th><th class="num">In stock</th>
+    <th class="num">In transit</th><th class="num">Avg off MSRP</th>
+  </tr></thead><tbody id="hist_body"></tbody></table></div>
+  <div class="card"><div class="mut" style="margin-bottom:8px">Cumulative listed vs sold</div>
+    <svg id="chart" viewBox="0 0 320 120" width="100%" height="120" preserveAspectRatio="none"></svg>
+  </div>
+</div>
+
+<footer>
+  Data: <a href="data.json">data.json</a> &middot;
+  <a href="calculator.html">Lease calculator</a> &middot; built by
+  <a href="https://github.com/YOUR_USER/YOUR_REPO" id="repo_link">polestar4-inventory-tracker</a>
+  &middot; not affiliated with Polestar. Prices are configured cash payment
+  totals from the US stock-cars API; car identity = spec code + production week (no VIN exposed).
+</footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const usd=v=>v==null?"&ndash;":"$"+Math.round(v).toLocaleString("en-US");
+const pct=v=>v==null?"&ndash;":Math.round(v*100)+"%";
+let INV=[],SORT={k:"price_now",dir:1};
+
+function statusTag(a){const cls=a==="in_stock"?"in_stock":(a==="in_transit"?"in_transit":"sold");
+const txt=a==="in_stock"?"in stock":(a==="in_transit"?"in transit":"sold");
+return '<span class="tag '+cls+'">'+txt+"</span>";}
+
+function rows(){const k=SORT.k,d=SORT.dir;
+return INV.slice().sort((a,b)=>{let x=a[k],y=b[k];
+if(k==="store_names"){x=x?x.length:0;y=y?y.length:0;}
+if(k==="availability"){x=a.availability==="in_stock"?0:1;y=b.availability==="in_stock"?0:1;}
+if(k==="off"){x=(a.msrp-a.price_now)/a.msrp;y=(b.msrp-b.price_now)/b.msrp;}
+if(typeof x==="string"||typeof y==="string")return d*String(x??"").localeCompare(String(y??""));
+return d*((x??1e15)-(y??1e15));});}
+
+function renderInv(){const tb=$("inv_body");
+tb.innerHTML=rows().map(c=>{const off=c.msrp&&c.price_now?1-c.price_now/c.msrp:null;
+return "<tr><td class='num'>"+usd(c.price_now)+"</td><td class='num'>"+usd(c.msrp)+
+"</td><td class='num'>"+(off!=null?Math.round(off*100)+"%":"&ndash;")+"</td><td>"+
+statusTag(c.availability)+"</td><td>"+esc(c.exterior_color)+"</td><td>"+esc(c.rims)+
+"</td><td title='"+esc(c.options)+"'>"+esc(c.packages)+"</td><td>"+esc(c.lease_promo)+
+"</td><td>"+esc(c.delivery_label)+"</td><td class='num'>"+(c.days_on_lot==null?"&ndash;":c.days_on_lot)+
+"</td><td title='"+esc((c.store_names||[]).join(", "))+"'>"+(c.store_names||[]).length+"</td></tr>";}).join("")
+||"<tr><td colspan='11' class='mut'>no cars</td></tr>";}
+
+function renderStores(st){$("stores").innerHTML=st.map(s=>
+"<div class='store'><div>"+esc(s.store)+" <span class='n'>"+esc(s.state)+"</span></div><div>"+
+s.cars_visible+" <span class='n'>("+s.in_stock+" stock / "+s.in_transit+" transit)</span></div></div>").join("");}
+
+function renderHist(nh,st){$("hist_body").innerHTML=nh.slice().reverse().map(x=>
+"<tr><td>"+x.date+"</td><td class='num'>"+x.unique_cars+"</td><td class='num'>"+x.in_stock+
+"</td><td class='num'>"+x.in_transit+"</td><td class='num'>"+pct(x.avg_discount_pct)+"</td></tr>").join("");
+const pts=st.map((x,i)=>[40+i*(260/Math.max(st.length-1,1)),110-100*Math.min(x.sell_through_rate||0,1)]);
+$("chart").innerHTML="<line x1='35' y1='110' x2='310' y2='110' stroke='#21262d'/>"+
+"<polyline fill='none' stroke='#34d399' stroke-width='2' points='"+pts.map(p=>p.join(",")).join(" ")+"'/>"+
+"<text x='35' y='14' fill='#8b949e' font-size='10'>sell-through "+pct(st.length?st[st.length-1].sell_through_rate:0)+"</text>";}
+
+function renderCuts(pc){if(!pc.length){return;}
+$("cuts").innerHTML=pc.slice(0,10).map(c=>"<div class='store'><div title='"+esc(c.car_id)+"'>"+
+esc((c.car_id||"").slice(0,18))+"&hellip;</div><div><span class='cut-dn'>"+usd(c.old_value)+
+"</span> &rarr; <span class='cut-up'>"+usd(c.new_value)+"</span> <span class='n'>"+
+c.snapshot_date+"</span></div></div>").join("");
+$("cuts").classList.remove("mut");}
+
+document.querySelectorAll("#inv th").forEach(th=>th.addEventListener("click",()=>{
+const k=th.dataset.k;SORT.dir=SORT.k===k?-SORT.dir:1;SORT.k=k;renderInv();}));
+
+fetch("data.json").then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}).then(d=>{
+INV=d.inventory;
+$("gen").textContent="generated "+(d.generated_at||"").replace("T"," ").slice(0,16)+" UTC";
+$("snapdate").textContent=d.snapshot_date;
+const n=d.national||{},inv=INV||[];
+$("k_total").textContent=n.unique_cars??inv.length;
+$("k_stock").textContent=n.in_stock??"&ndash;";
+$("k_transit").textContent=n.in_transit??"&ndash;";
+$("k_disc").textContent=n.avg_discount_pct!=null?Math.round(n.avg_discount_pct*100)+"%":"&ndash;";
+const prices=inv.map(c=>c.price_now).filter(v=>v!=null);
+$("k_min").textContent=prices.length?usd(Math.min(...prices)):"&ndash;";
+const dols=inv.map(c=>c.days_on_lot).filter(v=>v!=null);
+$("k_dol").textContent=dols.length?Math.max(...dols)+"d":"&ndash;";
+renderStores(d.stores||[]);renderInv();renderHist(d.national_history||[],d.sell_through||[]);
+renderCuts(d.price_changes||[]);
+if(d.repo_url){$("repo_link").href=d.repo_url;}
+}).catch(e=>{$("err").hidden=false;
+$("err").textContent="Failed to load data.json ("+e.message+"). Run export_site_data.py after a snapshot.";});
+</script>
+</body>
+</html>

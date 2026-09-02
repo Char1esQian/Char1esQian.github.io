@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Car Lease Payment Calculator</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0a0f1e;
+    --card:#121a2d;
+    --card2:#0d1424;
+    --border:rgba(148,163,184,.16);
+    --text:#e7edf8;
+    --muted:#8fa1ba;
+    --accent:#34d399;
+    --violet:#818cf8;
+    --amber:#fbbf24;
+    --track:#26334d;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 700px at 88% -10%, rgba(52,211,153,.07), transparent 60%),
+      radial-gradient(900px 650px at -8% 110%, rgba(129,140,248,.08), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font:15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height:100vh;
+  }
+  .app{max-width:1080px;margin:0 auto;padding:36px 20px 48px}
+  header h1{font-size:26px;margin:0 0 6px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);max-width:60ch}
+
+  .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:20px;margin-top:26px;align-items:start}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0)), var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:22px;
+  }
+  .panel > h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 18px}
+
+  /* ---------- input fields ---------- */
+  .field{margin-bottom:22px}
+  .field:last-child{margin-bottom:0}
+  .field-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+  .field-head label{font-weight:600;font-size:14px}
+  .hint{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:1px}
+  .caption{color:var(--muted);font-size:12px;white-space:nowrap}
+  .caption.strong{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+
+  input[type=number]{
+    background:var(--card2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    color:var(--text);
+    padding:8px 10px;
+    font:inherit;
+    font-variant-numeric:tabular-nums;
+    text-align:right;
+    width:130px;
+  }
+  input[type=number]:focus{outline:none;border-color:var(--accent)}
+  input[type=number].num-sm{width:104px}
+  .apr{display:flex;align-items:center;gap:5px}
+  .apr .unit{color:var(--muted);font-weight:600}
+
+  input[type=range]{
+    width:100%;height:6px;border-radius:99px;
+    background:var(--track);
+    -webkit-appearance:none;appearance:none;
+    outline:none;margin:12px 0 4px;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:18px;height:18px;border-radius:50%;
+    background:#fff;border:5px solid var(--accent);
+    box-shadow:0 1px 5px rgba(0,0,0,.45);cursor:grab;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:8px;height:8px;border-radius:50%;
+    background:#fff;border:5px solid var(--accent);
+    box-shadow:0 1px 5px rgba(0,0,0,.45);cursor:grab;
+  }
+  input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:transparent}
+  .field-foot{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:3px}
+
+  .pair{display:grid;grid-template-columns:1.3fr 1fr;gap:18px}
+  @media (max-width:560px){.pair{grid-template-columns:1fr}}
+  .side-note{color:var(--muted);font-size:12px;margin:12px 0 0}
+
+  .chips{display:flex;gap:8px;margin-top:10px}
+  .chip{
+    background:var(--card2);border:1px solid var(--border);color:var(--muted);
+    border-radius:99px;padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;
+    font-family:inherit;
+  }
+  .chip:hover{color:var(--text)}
+  .chip.active{color:#0a0f1e;background:var(--accent);border-color:var(--accent)}
+
+  /* ---------- results ---------- */
+  .result-top{margin:2px 0 18px}
+  .big{
+    font-size:clamp(38px, 5vw, 48px);
+    font-weight:750;letter-spacing:-.02em;
+    color:var(--accent);
+    font-variant-numeric:tabular-nums;
+    line-height:1.1;
+  }
+  .sub2{color:var(--muted);font-size:13px;margin-top:4px}
+
+  .rates{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  .rate{
+    background:var(--card2);border:1px solid var(--border);border-radius:12px;
+    padding:12px 14px;display:flex;flex-direction:column;gap:2px;
+  }
+  .rate-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .rate-value{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+
+  .stat{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
+  .stat span{color:var(--muted)}
+  .stat em{font-style:normal;font-size:12px}
+  .stat b{font-variant-numeric:tabular-nums;font-weight:600}
+
+  .bar-wrap{margin-top:18px}
+  .bar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--track)}
+  .seg{height:100%;transition:width .15s ease}
+  .seg-dep{background:var(--violet)}
+  .seg-rent{background:var(--amber)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .legend-item{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .dot-dep{background:var(--violet)}
+  .dot-rent{background:var(--amber)}
+
+  .warn{
+    margin-top:16px;padding:10px 12px;border-radius:10px;font-size:13px;
+    background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.35);color:#fcd34d;
+  }
+
+  details.receipt{margin-top:14px}
+  details.receipt summary{font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;user-select:none}
+  details.receipt table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+  details.receipt td{padding:7px 0;border-bottom:1px solid rgba(148,163,184,.1);vertical-align:top}
+  details.receipt td:first-child{color:var(--muted);padding-right:12px}
+  details.receipt td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  details.receipt tr.strong td{color:var(--text);font-weight:600}
+  details.receipt tr.total td{border-bottom:none;border-top:1px solid var(--border);font-weight:700;color:var(--accent);font-size:14px}
+  .mini{color:var(--muted);font-size:12px}
+
+  .formula{margin:16px 0 0;font-size:12px;color:var(--muted);line-height:1.6}
+  .footnote{margin:24px 0 0;font-size:12px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1>Car Lease Payment Calculator</h1>
+    <p>Estimate the monthly lease payment from MSRP, the hypothetical (negotiated) discount, incentives, residual value, and the money factor. APR = money factor × 2400.</p>
+  </header>
+
+  <div class="grid">
+    <!-- ================= INPUTS ================= -->
+    <section class="panel">
+      <h2>Deal inputs</h2>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="msrp-input">MSRP <span class="hint">manufacturer's suggested retail price</span></label>
+          <input type="number" id="msrp-input" min="0" step="100" value="45000">
+        </div>
+        <input type="range" id="msrp-slider" min="5000" max="250000" step="50" value="45000" aria-label="MSRP slider">
+        <div class="field-foot"><span>$5,000</span><span>$250,000</span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="discount-input">Hypothetical Discount <span class="hint">negotiated discount off MSRP used to set the cap cost</span></label>
+          <input type="number" id="discount-input" min="0" step="100" value="4000">
+        </div>
+        <input type="range" id="discount-slider" min="0" max="45000" step="50" value="4000" aria-label="Hypothetical discount slider">
+        <div class="field-foot"><span>$0</span><span id="discount-pct"></span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="incentives-input">Incentives <span class="hint">rebates or manufacturer incentives applied to the cap cost</span></label>
+          <input type="number" id="incentives-input" min="0" step="100" value="0">
+        </div>
+        <input type="range" id="incentives-slider" min="0" max="45000" step="50" value="0" aria-label="Incentives slider">
+        <div class="field-foot"><span>$0</span><span id="incentives-pct"></span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="residual-input">Residual Value <span class="hint">car's projected value at lease end (the buyout price)</span></label>
+          <input type="number" id="residual-input" min="0" step="100" value="24750">
+        </div>
+        <input type="range" id="residual-slider" min="0" max="45000" step="50" value="24750" aria-label="Residual value slider">
+        <div class="field-foot"><span>$0</span><span id="residual-pct"></span></div>
+      </div>
+
+      <div class="pair">
+        <div class="field">
+          <div class="field-head">
+            <label for="mf-input">Money Factor <span class="hint">the lease's interest rate</span></label>
+            <input type="number" class="num-sm" id="mf-input" min="0" step="0.00001" value="0.00125">
+          </div>
+          <input type="range" id="mf-slider" min="0" max="0.00625" step="0.00001" value="0.00125" aria-label="Money factor slider">
+          <div class="field-foot"><span>0.00000</span><span>0.00625 ≈ 15% APR</span></div>
+        </div>
+        <div class="field">
+          <div class="field-head">
+            <label for="apr-input">APR <span class="hint">= money factor × 2400</span></label>
+            <span class="apr"><input type="number" class="num-sm" id="apr-input" min="0" max="15" step="0.01" value="3.00"><span class="unit">%</span></span>
+          </div>
+          <p class="side-note">Type an APR here and the money factor follows (APR ÷ 2400).</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="term-slider">Lease Term <span class="hint">months</span></label>
+          <span class="caption strong" id="term-value">36 months</span>
+        </div>
+        <input type="range" id="term-slider" min="12" max="60" step="1" value="36" aria-label="Lease term slider">
+        <div class="chips">
+          <button type="button" class="chip" data-term="24">24</button>
+          <button type="button" class="chip" data-term="36">36</button>
+          <button type="button" class="chip" data-term="48">48</button>
+          <button type="button" class="chip" data-term="60">60</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= RESULTS ================= -->
+    <section class="panel">
+      <h2>Estimated monthly payment</h2>
+
+      <div class="result-top">
+        <div class="big" id="out-monthly">$0.00</div>
+        <div class="sub2" id="out-sub"></div>
+      </div>
+
+      <div class="rates">
+        <div class="rate"><span class="rate-label">APR</span><span class="rate-value" id="out-apr">0.00%</span></div>
+        <div class="rate"><span class="rate-label">Money factor</span><span class="rate-value" id="out-mf">0.00000</span></div>
+      </div>
+
+      <div class="stat"><span>Adjusted capitalized cost <em class="mini">(MSRP − discount − incentives)</em></span><b id="out-cap">$0</b></div>
+      <div class="stat"><span>Residual value <em class="mini" id="out-residual-pct"></em></span><b id="out-residual">$0</b></div>
+      <div class="stat"><span>Depreciation per month</span><b id="out-dep">$0.00</b></div>
+      <div class="stat"><span>Finance (rent) charge per month</span><b id="out-rent">$0.00</b></div>
+
+      <div class="bar-wrap">
+        <div class="bar"><div class="seg seg-dep" id="bar-dep"></div><div class="seg seg-rent" id="bar-rent"></div></div>
+        <div class="legend">
+          <span class="legend-item"><i class="dot dot-dep"></i><span id="legend-dep"></span></span>
+          <span class="legend-item"><i class="dot dot-rent"></i><span id="legend-rent"></span></span>
+        </div>
+      </div>
+
+      <div class="warn" id="warn" hidden></div>
+
+      <details class="receipt">
+        <summary>Show calculation breakdown</summary>
+        <table>
+          <tbody>
+            <tr><td>MSRP</td><td id="r-msrp"></td></tr>
+            <tr><td>Hypothetical discount</td><td id="r-disc"></td></tr>
+            <tr><td>Incentives &amp; rebates</td><td id="r-inc"></td></tr>
+            <tr class="strong"><td>Adjusted capitalized cost</td><td id="r-cap"></td></tr>
+            <tr><td>Residual value <span class="mini" id="r-respct"></span></td><td id="r-res"></td></tr>
+            <tr class="sep"><td id="r-deplabel"></td><td id="r-dep"></td></tr>
+            <tr><td id="r-rentlabel"></td><td id="r-rent"></td></tr>
+            <tr><td>Total finance charges over the term</td><td id="r-renttotal"></td></tr>
+            <tr class="total"><td>Monthly payment</td><td id="r-monthly"></td></tr>
+          </tbody>
+        </table>
+      </details>
+
+      <p class="formula">
+        Monthly payment = depreciation + rent charge = (Cap cost − Residual) ÷ Term + (Cap cost + Residual) × Money factor.
+        APR = Money factor × 2400.
+      </p>
+    </section>
+  </div>
+
+  <p class="footnote">Excludes sales tax, acquisition/disposition fees, capitalized cost reductions (down payment or trade-in), and rebates. APR ↔ money factor conversion uses the standard ×2400 (U.S.) convention.</p>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const MF_TO_APR = 2400;
+
+  const state = { msrp:45000, discount:4000, incentives:0, residual:24750, mf:0.00125, term:36 };
+
+  const sliders = {
+    msrp: $('msrp-slider'),
+    discount: $('discount-slider'),
+    incentives: $('incentives-slider'),
+    residual: $('residual-slider'),
+    mf: $('mf-slider'),
+    term: $('term-slider'),
+  };
+  const inputs = {
+    msrp: $('msrp-input'),
+    discount: $('discount-input'),
+    incentives: $('incentives-input'),
+    residual: $('residual-input'),
+    mf: $('mf-input'),
+    apr: $('apr-input'),
+  };
+
+  const usd = (v, dec=2) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:dec, maximumFractionDigits:dec});
+  const grp = v => v.toLocaleString('en-US', {maximumFractionDigits:0});
+  const pctOfMsrp = v => state.msrp > 0 ? (v/state.msrp*100).toFixed(1) + '% of MSRP' : '—';
+
+  function fmtInput(key){
+    if (key === 'mf')  return state.mf.toFixed(5);
+    if (key === 'apr') return (state.mf * MF_TO_APR).toFixed(2);
+    return String(state[key]);
+  }
+
+  function paint(s){
+    const min = parseFloat(s.min), max = parseFloat(s.max), v = parseFloat(s.value);
+    let p = max > min ? (v - min) / (max - min) * 100 : 0;
+    p = Math.max(0, Math.min(100, p));
+    s.style.background = `linear-gradient(90deg, var(--accent) ${p}%, var(--track) ${p}%)`;
+  }
+
+  function render(){
+    // keep sliders in sync (discount/residual sliders span the current MSRP)
+    Object.keys(sliders).forEach(key => {
+      if (key === 'discount' || key === 'incentives' || key === 'residual') sliders[key].max = String(Math.max(1, state.msrp));
+      sliders[key].value = state[key];
+      paint(sliders[key]);
+    });
+    // keep number fields in sync, but never rewrite the one being typed in
+    Object.keys(inputs).forEach(key => {
+      if (document.activeElement !== inputs[key]) inputs[key].value = fmtInput(key);
+    });
+
+    $('discount-pct').textContent = pctOfMsrp(state.discount);
+    $('incentives-pct').textContent = pctOfMsrp(state.incentives);
+    $('residual-pct').textContent = pctOfMsrp(state.residual);
+    $('term-value').textContent = state.term + ' months';
+    document.querySelectorAll('.chip').forEach(ch => ch.classList.toggle('active', Number(ch.dataset.term) === state.term));
+
+    const cap     = Math.max(0, state.msrp - state.discount - state.incentives);
+    const depMo   = (cap - state.residual) / state.term;
+    const rentMo  = (cap + state.residual) * state.mf;
+    const monthly = depMo + rentMo;
+    const apr     = state.mf * MF_TO_APR;
+
+    $('out-monthly').textContent = usd(monthly);
+    $('out-sub').textContent = `for ${state.term} months · ${usd(monthly * state.term)} total of payments`;
+    $('out-apr').textContent = apr.toFixed(2) + '%';
+    $('out-mf').textContent = state.mf.toFixed(5);
+    $('out-cap').textContent = usd(cap, 0);
+    $('out-residual-pct').textContent = '(' + pctOfMsrp(state.residual) + ')';
+    $('out-residual').textContent = usd(state.residual, 0);
+    $('out-dep').textContent = usd(depMo);
+    $('out-rent').textContent = usd(rentMo);
+
+    const safeMonthly = Math.max(Math.abs(monthly), 1e-9);
+    const depShare = Math.max(0, Math.min(100, depMo / safeMonthly * 100));
+    $('bar-dep').style.width = depShare + '%';
+    $('bar-rent').style.width = (100 - depShare) + '%';
+    $('legend-dep').textContent = `Depreciation ${usd(depMo)} (${depShare.toFixed(0)}%)`;
+    $('legend-rent').textContent = `Finance charge ${usd(rentMo)} (${(100 - depShare).toFixed(0)}%)`;
+
+    $('r-msrp').textContent = usd(state.msrp, 0);
+    $('r-disc').textContent = '− ' + usd(state.discount, 0);
+    $('r-inc').textContent = '− ' + usd(state.incentives, 0);
+    $('r-cap').textContent = usd(cap, 0);
+    $('r-respct').textContent = '(' + pctOfMsrp(state.residual) + ')';
+    $('r-res').textContent = usd(state.residual, 0);
+    $('r-deplabel').textContent = `Depreciation · (${grp(cap)} − ${grp(state.residual)}) ÷ ${state.term}`;
+    $('r-dep').textContent = usd(depMo);
+    $('r-rentlabel').textContent = `Rent charge · (${grp(cap)} + ${grp(state.residual)}) × ${state.mf.toFixed(5)}`;
+    $('r-rent').textContent = usd(rentMo);
+    $('r-renttotal').textContent = usd(rentMo * state.term);
+    $('r-monthly').textContent = usd(monthly);
+
+    const msgs = [];
+    if (state.discount + state.incentives > state.msrp) msgs.push('The discount plus incentives is larger than the MSRP, so the capitalized cost is floored at $0.');
+    if (state.residual > cap) msgs.push('The residual value is above the capitalized cost — double-check these inputs.');
+    const warn = $('warn');
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(' ');
+  }
+
+  // sliders
+  ['msrp','discount','incentives','residual','mf'].forEach(key => {
+    sliders[key].addEventListener('input', () => { state[key] = parseFloat(sliders[key].value); render(); });
+  });
+  sliders.term.addEventListener('input', () => { state.term = parseInt(sliders.term.value, 10); render(); });
+
+  // dollar fields (clamp to [0, MSRP] on commit; MSRP itself just needs to be positive)
+  ['msrp','discount','incentives','residual'].forEach(key => {
+    inputs[key].addEventListener('input', () => {
+      const v = parseFloat(inputs[key].value);
+      if (Number.isFinite(v)) { state[key] = Math.max(0, v); render(); }
+    });
+    inputs[key].addEventListener('change', () => {
+      const v = parseFloat(inputs[key].value);
+      let nv = Number.isFinite(v) ? Math.max(0, v) : state[key];
+      nv = (key === 'msrp') ? Math.max(nv, 1) : Math.min(nv, state.msrp);
+      state[key] = nv;
+      render();
+      inputs[key].value = fmtInput(key);
+    });
+  });
+
+  // money factor (typed directly)
+  inputs.mf.addEventListener('input', () => {
+    const v = parseFloat(inputs.mf.value);
+    if (Number.isFinite(v) && v >= 0) { state.mf = v; render(); }
+  });
+  inputs.mf.addEventListener('change', () => {
+    const v = parseFloat(inputs.mf.value);
+    if (Number.isFinite(v) && v >= 0) state.mf = v;
+    render();
+    inputs.mf.value = fmtInput('mf');
+  });
+
+  // APR field — typing here back-computes the money factor
+  inputs.apr.addEventListener('input', () => {
+    const v = parseFloat(inputs.apr.value);
+    if (Number.isFinite(v) && v >= 0) { state.mf = v / MF_TO_APR; render(); }
+  });
+  inputs.apr.addEventListener('change', () => {
+    const v = parseFloat(inputs.apr.value);
+    if (Number.isFinite(v) && v >= 0) state.mf = v / MF_TO_APR;
+    render();
+    inputs.apr.value = fmtInput('apr');
+  });
+
+  // term preset chips
+  document.querySelectorAll('.chip').forEach(ch => {
+    ch.addEventListener('click', () => { state.term = parseInt(ch.dataset.term, 10); render(); });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

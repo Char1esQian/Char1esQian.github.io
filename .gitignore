@@ -1,0 +1,14 @@
+# build artifacts
+__pycache__/
+*.pyc
+
+# local probes / research files (scraped site bundles, one-off scripts)
+_probe/
+
+# runtime data (too big / too churny for git; the site carries docs/data.json)
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+tracker.log
+*.out
