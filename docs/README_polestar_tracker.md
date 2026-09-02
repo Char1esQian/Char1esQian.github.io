@@ -91,8 +91,10 @@ The repo doubles as a website: `docs/index.html` renders `docs/data.json`
 dashboard — KPIs, per-store panel, history and sell-through chart, and an
 inventory table with:
 
-- **location filter** (state dropdown, built from store data; filters both the
-  table and the stores panel),
+- **location filters** — a state dropdown and a dealership dropdown (built from
+  store data; the dealership list narrows to the selected state, e.g. NJ has
+  Manasquan / Princeton / Short Hills, each with its visible-car count).
+  Both filter the inventory table and the stores panel.
 - **trim filter** (Dual motor AWD 544 hp / Rear motor RWD 272 hp — Polestar's
   API exposes no trim name, so trim = motor/drive/hp),
 - **status filter** (in stock / in transit),
@@ -101,6 +103,8 @@ inventory table with:
   biggest discount,
 - **days-on-lot badges** (amber ≥14 days, red ≥30 days) with a first-seen
   tooltip; a "N of M cars" counter reflects the active filters.
+- **Column order** puts the market-relevant info first: Price, Dealers,
+  On lot, First seen, then Off/MSRP, status and spec details.
 
 
 Daily workflow:
