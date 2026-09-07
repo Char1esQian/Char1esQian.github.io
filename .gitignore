@@ -5,8 +5,9 @@ __pycache__/
 # local probes / research files (scraped site bundles, one-off scripts)
 _probe/
 
-# runtime data (too big / too churny for git; the site carries docs/data.json)
-*.sqlite3
+# runtime churn (polestar4_inventory.sqlite3 IS tracked: GitHub Actions needs
+# it in the repo to build each daily snapshot on top of the last one;
+# transient sidecar files and logs stay out)
 *.sqlite3-journal
 *.sqlite3-wal
 *.sqlite3-shm

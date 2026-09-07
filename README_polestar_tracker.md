@@ -113,18 +113,19 @@ inventory table with:
   On lot, First seen, then Off/MSRP, status and spec details.
 
 
-Daily workflow:
+Automated daily tracking (no local machine needed):
+
+```text
+GitHub Actions: .github/workflows/polestar-tracker.yml runs daily at 07:30 ET
+  snapshot -> export data.json -> commit DB + docs\ -> Pages republishes
+Local scripts below remain as a manual fallback.
+```
+
+Manual workflow (fallback / immediate refresh):
 
 ```text
 run_tracker.bat        double-click: snapshot + report
 publish_to_pages.bat   double-click: export data, refresh docs\, git commit+push
-```
-
-Or in cron / Task Scheduler (after the snapshot job):
-
-```
-python export_site_data.py
-git add -A && git commit -m "data update" && git push
 ```
 
 One-time setup (publish_to_pages.bat prints this if the folder is not a repo yet):
@@ -139,8 +140,31 @@ git branch -M main
 #    Branch: main, Folder: /docs - Save
 ```
 
-The site then lives at `https://<yourname>.github.io/`. `.gitignore` keeps
-the SQLite DB and logs out of git; `docs/data.json` carries the data.
+The site then lives at `https://<yourname>.github.io/`.
+
+## Automated daily tracking (GitHub Actions)
+
+`.github/workflows/polestar-tracker.yml` makes the tracker self-running in the
+cloud — no PC needs to stay on:
+
+- **Schedule:** daily at 07:30 US Eastern (`cron: "30 11 * * *"` UTC), plus a
+  manual *Run workflow* button on the repo's Actions tab.
+- **What it does:** checks out the repo → runs `snapshot` for all ~30 US
+  retailers (std-lib Python only, ~90 s) → writes the console `report` into the
+  run summary → regenerates `docs/data.json` → commits the updated SQLite DB +
+  `data.json` back to `main` → the branch-based Pages deployment republishes
+  the dashboard automatically.
+- **DB in git:** `polestar4_inventory.sqlite3` is *tracked* in the repo so each
+  run builds on the last one (`.gitattributes` marks it binary to keep diffs
+  sane). Sidecar files (`-wal/-shm/-journal`), `tracker.log` and `_probe/`
+  stay ignored. The history is a free daily backup; note it does expose the
+  accumulated inventory data in repo history — fine for a public project.
+- **Idempotent & safe:** snapshots use `INSERT OR REPLACE` keyed by
+  (date, car, partner), so re-running the same day is harmless; per-partner
+  API failures are logged and never abort the run; `concurrency` prevents
+  overlapping runs.
+- **Monitoring:** check the Actions tab — green run = fresh data; the run
+  summary contains the full daily report.
 
 ## Semantics & known limitations (all verified live)
 

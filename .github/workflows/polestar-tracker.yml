@@ -1,0 +1,58 @@
+name: polestar-tracker
+
+# Daily inventory snapshot + site publish, entirely in the cloud.
+# The SQLite DB lives in this repo; each run appends one snapshot,
+# commits the DB + docs/data.json back, and Pages republishes.
+
+on:
+  schedule:
+    - cron: "30 11 * * *"   # 07:30 US Eastern (11:30 UTC), daily
+  workflow_dispatch:        # also triggerable from the Actions tab
+
+permissions:
+  contents: write           # push the updated DB + docs/data.json back
+
+concurrency:
+  group: polestar-tracker
+  cancel-in-progress: false # never kill a snapshot mid-write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # push from a full clone
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Snapshot all ~30 US retailers
+        run: python3 polestar_tracker.py snapshot -v
+
+      - name: Report (also shown in the run summary)
+        run: |
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          (python3 polestar_tracker.py report >> "$GITHUB_STEP_SUMMARY" 2>&1) || \
+            echo "report failed (snapshot data is still stored)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Export site data + refresh docs/ copies
+        run: |
+          python3 export_site_data.py
+          cp polestar_tracker.py export_site_data.py run_tracker.bat \
+             README_polestar_tracker.md docs/
+
+      - name: Commit + push (republishes the site)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+          else
+            git commit -m "data: daily snapshot $(date -u +%F) [skip ci]"
+            git push origin HEAD
+          fi
