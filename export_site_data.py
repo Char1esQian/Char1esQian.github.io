@@ -89,6 +89,32 @@ def main() -> int:
     store_history = sorted(sh.values(),
                            key=lambda s: (-s["rows"][-1][1], s["store"]))
 
+    # New Jersey dealer focus: per-dealer on-lot counts per day + NJ total.
+    # rows = [date, vis<store1>, vis<store2>, ..., unique_nj_total]
+    # (dealer columns = cars visible at that space; total dedupes cars that
+    #  appear at several NJ spaces, same rule as v_national_daily)
+    nj_unique = {r["date"]: dict(r) for r in con.execute(
+        "SELECT date, COUNT(*) AS cars FROM"
+        " (SELECT l.snapshot_date AS date, l.car_id"
+        "    FROM listings l JOIN retailers r ON r.partner_id = l.partner_id"
+        "   WHERE r.state_code = 'NJ'"
+        "   GROUP BY l.snapshot_date, l.car_id) GROUP BY date")}
+    nj_pairs = {}
+    nj_stores = {}
+    for r in con.execute(
+            "SELECT date, store, cars_visible FROM v_per_store_daily"
+            " WHERE state = 'NJ' ORDER BY date"):
+        nj_pairs.setdefault(r["date"], {})[r["store"]] = r["cars_visible"]
+        nj_stores.setdefault(r["store"], 0)
+    nj_dates = sorted(nj_unique)
+    nj_order = sorted(nj_stores,
+                      key=lambda s: (-(nj_pairs.get(nj_dates[-1], {}).get(s, 0)
+                                       if nj_dates else 0), s))
+    nj_history = {"dates": nj_dates,
+                  "stores": nj_order,
+                  "rows": [[d] + [nj_pairs.get(d, {}).get(s, 0) for s in nj_order] +
+                           [nj_unique[d]["cars"]] for d in nj_dates]}
+
     # link the site footer to the actual repo, if this folder is pushed to GitHub
     repo_url = None
     try:
@@ -115,6 +141,7 @@ def main() -> int:
         "sell_through": sell_through,
         "national_history": national_history,
         "store_history": store_history,
+        "nj_history": nj_history,
         "price_changes": price_changes,
         "repo_url": repo_url,
     }

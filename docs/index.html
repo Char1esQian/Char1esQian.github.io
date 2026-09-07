@@ -173,6 +173,20 @@ color:var(--mut);font-size:12.5px}
   </div>
 </div>
 
+<h2>New Jersey dealers</h2>
+<div class="card">
+  <div id="nj_info" class="mut" style="margin-bottom:10px"></div>
+  <table id="nj"><thead><tr id="nj_head"></tr></thead><tbody id="nj_body">
+    <tr><td class="mut">loading&hellip;</td></tr></tbody></table>
+  <svg id="nj_chart" viewBox="0 0 900 160" width="100%"
+       preserveAspectRatio="xMidYMid meet" style="margin-top:10px"></svg>
+  <div class="mut" style="font-size:12px;margin-top:6px" id="nj_legend"></div>
+  <div class="mut" style="font-size:12px;margin-top:6px">
+    Dealer columns count cars visible at that space; the NJ total dedupes cars
+    visible at several NJ spaces (same rule as the national view). Tracked
+    automatically every day by the scheduled snapshot.</div>
+</div>
+
 <footer>
   Data: <a href="data.json">data.json</a> &middot;
   <a href="calculator.html">Lease calculator</a> &middot; built by
@@ -297,6 +311,52 @@ pts.forEach((p,i)=>g+="<circle cx='"+p[0].toFixed(1)+"' cy='"+p[1].toFixed(1)+
 "' r='3' fill='#60a5fa'><title>"+rows[i][0]+" &#183; total visible: "+rows[i][1]+"</title></circle>");
 svg.innerHTML=g;}
 
+let NJ=null;
+function renderNJ(){const nj=NJ,svg=$("nj_chart");
+if(!nj||!nj.rows||!nj.rows.length){
+  $("nj_body").innerHTML="<tr><td class='mut'>no NJ data yet</td></tr>";
+  $("nj_info").textContent="";svg.innerHTML="";$("nj_legend").textContent="";return;}
+const stores=nj.stores,rows=nj.rows;
+$("nj_head").innerHTML="<th>Date</th>"+stores.map(s=>
+  "<th class='num'>"+esc(String(s).replace("Polestar ",""))+"</th>").join("")+
+  "<th class='num'>NJ total</th>";
+$("nj_body").innerHTML=rows.slice().reverse().map(r=>
+  "<tr><td>"+r[0]+"</td>"+
+  r.slice(1,-1).map(v=>"<td class='num'>"+v+"</td>").join("")+
+  "<td class='num'><b>"+r[r.length-1]+"</b></td></tr>").join("");
+$("nj_info").innerHTML="cars on lot per day &#183; "+stores.length+
+  " spaces &#183; "+rows.length+" snapshot"+(rows.length>1?"s":"");
+const W=900,L=34,R=12,T=12,B=136,PH=B-T,pw=W-L-R;
+const yMax=Math.max(1,...rows.flatMap(r=>r.slice(1)));
+const x=i=>L+(rows.length>1?i*(pw/(rows.length-1)):pw/2);
+const y=v=>B-PH*v/yMax;
+const colors=["#60a5fa","#34d399","#f59e0b","#a78bfa","#f472b6","#e879f9"];
+let g="";
+for(let i=0;i<=3;i++){const yy=T+PH*i/3;
+  g+="<line x1='"+L+"' y1='"+yy.toFixed(1)+"' x2='"+(W-R)+"' y2='"+yy.toFixed(1)+
+     "' stroke='#21262d'"+(i?"":" stroke-width='1.5'")+"/><text x='"+(L-5)+
+     "' y='"+(yy+3).toFixed(1)+"' fill='#8b949e' font-size='10' text-anchor='end'>"+
+     Math.round(yMax*(1-i/3))+"</text>";}
+const step=Math.max(1,Math.ceil(rows.length/Math.floor(pw/70)));
+rows.forEach((r,i)=>{if(i%step===0||i===rows.length-1)
+  g+="<text x='"+x(i).toFixed(1)+"' y='152' fill='#8b949e' font-size='10'"+
+     " text-anchor='middle'>"+r[0].slice(5)+"</text>";});
+stores.forEach((s,si)=>{const pts=rows.map((r,i)=>
+  x(i).toFixed(1)+","+y(r[si+1]).toFixed(1)).join(" ");
+  g+="<polyline fill='none' stroke='"+colors[si%colors.length]+
+     "' stroke-width='2' points='"+pts+"'/>";});
+g+="<polyline fill='none' stroke='#e6edf3' stroke-width='2'"+
+   " stroke-dasharray='6 4' points='"+rows.map((r,i)=>
+   x(i).toFixed(1)+","+y(r[r.length-1]).toFixed(1)).join(" ")+"'/>";
+rows.forEach((r,i)=>{g+="<circle cx='"+x(i).toFixed(1)+"' cy='"+
+  y(r[r.length-1]).toFixed(1)+"' r='3' fill='#e6edf3'><title>"+r[0]+
+  " &#183; NJ total: "+r[r.length-1]+"</title></circle>";});
+svg.innerHTML=g;
+$("nj_legend").innerHTML="&#9644; per-space cars on lot: "+stores.map((s,si)=>
+  "<span style='color:"+colors[si%colors.length]+"'>"+esc(String(s).replace("Polestar ",""))+
+  "</span>").join(", ")+
+  " &nbsp;&#9644;&nbsp;<span style='color:#e6edf3'>NJ total (deduped)</span>";}
+
 function renderCuts(pc){if(!pc.length){return;}
 $("cuts").innerHTML=pc.slice(0,10).map(c=>"<div class='store'><div title='"+esc(c.car_id)+"'>"+
 esc((c.car_id||"").slice(0,18))+"&hellip;</div><div><span class='cut-dn'>"+usd(c.old_value)+
@@ -342,6 +402,7 @@ const dols=inv.map(c=>c.days_on_lot).filter(v=>v!=null);
 $("k_dol").textContent=dols.length?Math.max(...dols)+"d":"&ndash;";
 renderAll();renderHist(d.national_history||[],d.sell_through||[]);
 SH=d.store_history||[];NH=d.national_history||[];CSTORE="";renderTrend();
+NJ=d.nj_history||null;renderNJ();
 renderCuts(d.price_changes||[]);
 if(d.repo_url){$("repo_link").href=d.repo_url;}
 }).catch(e=>{$("err").hidden=false;

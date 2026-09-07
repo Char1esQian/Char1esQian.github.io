@@ -109,6 +109,9 @@ inventory table with:
   dealership from the dropdown above the chart (dealerships are listed with
   their state). Column values are labeled on the chart when there are 16 or
   fewer snapshots; every element has a hover tooltip with exact figures.
+- **NJ dealers card** — daily on-lot count for every New Jersey space (one
+  column per dealer) plus a deduplicated NJ total row, with a per-dealer line
+  chart over time. Updates automatically with each daily snapshot.
 - **Column order** puts the market-relevant info first: Price, Dealers,
   On lot, First seen, then Off/MSRP, status and spec details.
 
